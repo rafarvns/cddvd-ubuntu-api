@@ -10,6 +10,7 @@ A robust, secure, and modular Node.js/TypeScript API designed to control optical
 - **Hardware Control**: Remote eject capability.
 - **Media Support**: Automatically detects and handles PS1 (via `cdrdao`) and PS2 (via `wodim`) recording requirements.
 - **Standalone Binary**: Can be packaged into a single executable for easy distribution on Linux.
+- **Docker Ready**: Pre-configured Docker and Docker Compose support for easy deployment.
 
 ## 🛠️ Tech Stack
 
@@ -17,6 +18,19 @@ A robust, secure, and modular Node.js/TypeScript API designed to control optical
 - **Frontend**: Vanilla HTML5, CSS3 (Modern Industrial Aesthetic), JavaScript.
 - **Tools**: `wodim`, `cdrdao` (for Linux hardware interaction).
 - **Logging**: Pino.
+
+## 🐳 Docker (Recommended)
+
+The easiest way to run BurnStation is using Docker. It handles all native dependencies (`wodim`, `cdrdao`) and hardware permissions automatically.
+
+### Run with Docker Compose
+```bash
+docker-compose up --build -d
+```
+Access the dashboard at `http://localhost:48271`.
+
+> [!IMPORTANT]
+> Change the volume mapping in `docker-compose.yml` to point to your ISO directory if it's not `/home/rafarvns/isos`.
 
 ## ⚙️ Configuration
 
@@ -28,53 +42,41 @@ The application is configured via environment variables or a `.env` file:
 | `ISOS_DIR` | Directory where .iso and .cue files are stored | `/home/rafarvns/isos` |
 | `DRIVE_DEVICE` | Path to the optical drive device | `/dev/sr0` |
 
-## 📦 Getting Started
+## 🖥️ Native Installation (Ubuntu)
 
 ### Prerequisites
 - Node.js 18+
-- Linux system with burning tools installed:
-  ```bash
-  sudo apt update
-  sudo apt install wodim cdrdao
-  ```
+- Linux system with burning tools: `sudo apt install wodim cdrdao`
 
-### Installation
-1. Clone the repository.
-2. Install dependencies:
+### Setup
+1. Clone the repository and install dependencies:
    ```bash
    npm install
+   npm run build
    ```
 
-### Development
-Start the server in development mode with auto-reload:
-```bash
-npm run dev
-```
-Access the dashboard at `http://localhost:48271`.
+### 🛠️ Systemd Service Management
+You can install the API as a background system service:
 
-### Build
-Compile TypeScript to JavaScript:
+**Install:**
 ```bash
-npm run build
+sudo bash scripts/install-service.sh
 ```
 
-Generate a standalone Linux binary:
+**Uninstall:**
 ```bash
-npm run build:exe
+sudo bash scripts/uninstall-service.sh
 ```
-The output will be in the `./bin` directory.
 
 ## 📖 API Documentation
 The API follows the OpenAPI 3.0 specification. You can find the full spec in `docs/openapi.yaml`.
 
 ### Key Endpoints:
-- `GET /files`: List available media.
-- `POST /burn`: Start a burning job.
-- `GET /burn/:id`: Check status and logs.
-- `POST /drive/eject`: Eject the drive tray.
-
-## 🎨 Design Philosophy
-The frontend follows a **"BurnStation"** aesthetic—dark, industrial, and high-tech, focusing on clarity during the high-stakes process of optical media recording.
+- `GET /api/files`: List available media.
+- `POST /api/burn`: Start a burning job.
+- `GET /api/burn/:id`: Check status and logs.
+- `POST /api/drive/eject`: Eject the drive tray.
 
 ## ⚖️ License
 ISC
+

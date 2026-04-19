@@ -1,0 +1,21 @@
+services:
+  cddvd-api:
+    build: .
+    container_name: cddvd-ubuntu-api
+    restart: unless-stopped
+    ports:
+      - "48271:48271"
+    environment:
+      - PORT=48271
+      - ISOS_DIR=/app/isos
+      - DRIVE_DEVICE=/dev/sr0
+    volumes:
+      - /home/rafarvns/isos:/app/isos
+    devices:
+      - /dev/sr0:/dev/sr0
+      - /dev/sg0:/dev/sg0  # Generic SCSI device mapping (usually required for cdrdao)
+    cap_add:
+      - SYS_RAWIO
+      - SYS_ADMIN # Needed for some low-level SCSI commands
+    user: root # Ensuring full access to device files
+
