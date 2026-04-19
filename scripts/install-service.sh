@@ -55,8 +55,8 @@ WorkingDirectory=$INSTALL_DIR
 ExecStart=$INSTALL_DIR/executable
 Restart=always
 RestartSec=10
-StandardOutput=append:$INSTALL_DIR/logs/stdout.log
-StandardError=append:$INSTALL_DIR/logs/stderr.log
+StandardOutput=journal
+StandardError=journal
 
 [Install]
 WantedBy=multi-user.target
@@ -73,5 +73,5 @@ echo "------------------------------------------------"
 echo "Comandos úteis:"
 echo "  - Iniciar: sudo systemctl start $SERVICE_NAME"
 echo "  - Status:  sudo systemctl status $SERVICE_NAME"
-echo "  - Logs:    tail -f $INSTALL_DIR/logs/stdout.log"
+echo "  - Logs:    sudo journalctl -u $SERVICE_NAME -f"
 echo "------------------------------------------------"
