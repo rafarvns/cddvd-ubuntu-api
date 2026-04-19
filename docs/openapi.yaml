@@ -1,0 +1,163 @@
+openapi: 3.0.3
+info:
+  title: CD/DVD Burning API (PS1/PS2)
+  description: Backend API for controlling optical media recording on Ubuntu Linux.
+  version: 1.0.0
+servers:
+  - url: http://localhost:3000/api
+    description: Local server (development)
+paths:
+  /files:
+    get:
+      summary: List available media files
+      description: Returns a list of .iso and .cue files found in the configured directory.
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MediaFile'
+        '500':
+          description: Server error
+
+  /burn:
+    post:
+      summary: Start a new burning job
+      description: Detects media type and enqueues a job for recording.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  description: Basename of the file (e.g., game.iso)
+              required:
+                - file
+      responses:
+        '202':
+          description: Job enqueued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobQueuedResponse'
+        '400':
+          description: Invalid input or file not found
+        '500':
+          description: Internal server error
+
+  /burn/{id}:
+    get:
+      summary: Get burn job status and logs
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Job details retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BurnJob'
+        '404':
+          description: Job not found
+
+  /burn/{id}/cancel:
+    post:
+      summary: Cancel an ongoing burn job
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Cancellation signal sent
+        '400':
+          description: Job cannot be cancelled (already finished or invalid)
+
+  /history/all:
+    get:
+      summary: Get all job history
+      responses:
+        '200':
+          description: List of all past and current jobs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BurnJob'
+
+  /drive/eject:
+    post:
+      summary: Eject the optical drive tray
+      responses:
+        '200':
+          description: Eject command sent successfully
+        '500':
+          description: Failed to eject drive
+
+components:
+  schemas:
+    MediaFile:
+      type: object
+      properties:
+        filename:
+          type: string
+        type:
+          type: string
+          enum: [ps1, ps2]
+    
+    JobQueuedResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        id:
+          type: string
+          format: uuid
+
+    BurnJob:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        file:
+          type: string
+        type:
+          type: string
+          enum: [ps1, ps2]
+        status:
+          type: string
+          enum: [pending, running, success, error]
+        progress:
+          type: integer
+          minimum: 0
+          maximum: 100
+        logs:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        startedAt:
+          type: string
+          format: date-time
+        finishedAt:
+          type: string
+          format: date-time

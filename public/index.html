@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BurnStation - CD/DVD Burning API</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="glow-bg"></div>
+    
+    <div class="container">
+        <header>
+            <div class="logo">
+                <span class="icon">💿</span>
+                <h1>Burn<span>Station</span></h1>
+            </div>
+            <div class="status-badge" id="server-status">
+                <span class="dot"></span>
+                <span class="text">Connecting...</span>
+            </div>
+        </header>
+
+        <main>
+            <section class="controls panel">
+                <h2>Drive Controls</h2>
+                <div class="button-group">
+                    <button id="btn-eject" class="btn secondary">
+                        <span class="icon">⏏️</span> Eject Drive
+                    </button>
+                    <button id="btn-refresh" class="btn secondary">
+                        <span class="icon">🔄</span> Refresh Files
+                    </button>
+                </div>
+            </section>
+
+            <section class="burning-panel panel" id="burning-now" style="display: none;">
+                <div class="panel-header">
+                    <h2>🔥 Now Burning</h2>
+                    <span id="current-job-id" class="job-id"></span>
+                </div>
+                <div class="job-details">
+                    <div class="job-info">
+                        <p class="filename" id="current-filename">Loading...</p>
+                        <p class="meta" id="current-meta">Waiting for progress...</p>
+                    </div>
+                </div>
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="job-progress" style="width: 0%"></div>
+                    </div>
+                    <span class="progress-text" id="job-progress-text">0%</span>
+                </div>
+                <div class="logs-container" id="job-logs">
+                    <!-- Logs will appear here -->
+                </div>
+                <button id="btn-cancel" class="btn danger">Abort Process</button>
+            </section>
+
+            <div class="grid">
+                <section class="files-panel panel">
+                    <h2>Available Media</h2>
+                    <div class="search-box">
+                        <input type="text" id="file-search" placeholder="Filter files...">
+                    </div>
+                    <div class="file-list" id="file-list">
+                        <!-- Files will be injected here -->
+                    </div>
+                </section>
+
+                <section class="history-panel panel">
+                    <h2>Job History</h2>
+                    <div class="history-list" id="history-list">
+                        <!-- History will be injected here -->
+                    </div>
+                </section>
+            </div>
+        </main>
+
+        <footer>
+            <div class="config-info">
+                <span>Port: 48271</span>
+                <span id="target-device">Device: /dev/sr0</span>
+                <span id="isos-dir">Dir: /home/rafarvns/isos</span>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Modals -->
+    <div id="confirm-modal" class="modal">
+        <div class="modal-content">
+            <h3>Start Burning?</h3>
+            <p>You are about to burn "<span id="to-burn-file"></span>".</p>
+            <div class="modal-actions">
+                <button id="modal-cancel" class="btn secondary">Cancel</button>
+                <button id="modal-confirm" class="btn primary">Start Now</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
