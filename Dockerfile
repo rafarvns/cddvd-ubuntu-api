@@ -1,5 +1,5 @@
 # Build Stage
-FROM node:20-alpine AS builder
+FROM node:20-bullseye AS builder
 
 WORKDIR /app
 
@@ -10,7 +10,7 @@ COPY . .
 RUN npm run build
 
 # Runtime Stage
-FROM node:20-slim
+FROM node:20-bullseye-slim
 
 WORKDIR /app
 
@@ -29,3 +29,4 @@ COPY --from=builder /app/public ./public
 EXPOSE 48271
 
 CMD ["node", "dist/app.js"]
+
