@@ -45,6 +45,31 @@ export class BurnService {
   }
 
   /**
+   * Registra nos logs as informações da mídia inserida (Media ID/fabricante,
+   * velocidades de gravação suportadas, capacidade) via dvd+rw-mediainfo.
+   * Best-effort: nunca interrompe a gravação se falhar.
+   */
+  static async logMediaInfo(job: BurnJob): Promise<void> {
+    try {
+      const result = await ShellService.execute('dvd+rw-mediainfo', [config.driveDevice]);
+      const text = (result.stdout || result.stderr || '').trim();
+      if (!text) return;
+
+      job.logs.push('--- Mídia (dvd+rw-mediainfo) ---');
+      for (const line of text.split('\n')) {
+        const t = line.trim();
+        // Mantém só as linhas mais úteis para diagnóstico
+        if (/Media (ID|Book Type|Type|Profile)|Manufacturer|Speed|Legacy lead-out|Disc status|Free Blocks/i.test(t)) {
+          job.logs.push(t);
+        }
+      }
+      job.logs.push('-------------------------------');
+    } catch {
+      // dvd+rw-mediainfo ausente ou sem disco legível — segue a gravação normalmente
+    }
+  }
+
+  /**
    * Calcula o hash MD5 de uma fonte (arquivo ou device de bloco), lendo no
    * máximo `maxBytes` bytes. Alinhado a 2048 (setor de DVD) para ler discos
    * ópticos sem estourar a área gravada.
@@ -200,6 +225,12 @@ export class BurnService {
       args.push(`-speed=${opts.speed ?? 4}`);
       // -Z grava uma sessão inicial a partir de uma imagem pronta
       args.push('-Z', `${config.driveDevice}=${job.file}`);
+    }
+
+    // Loga as informações da mídia (Media ID, velocidades suportadas) antes de gravar.
+    // Ajuda a diagnosticar discos "marginais" e a entender a velocidade real escolhida.
+    if (job.type === 'ps2') {
+      await BurnService.logMediaInfo(job);
     }
 
     job.logs.push(`Comando: ${command} ${args.join(' ')}`);
