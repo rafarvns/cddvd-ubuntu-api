@@ -1,4 +1,6 @@
 import fs from 'fs/promises';
+import { createReadStream } from 'fs';
+import crypto from 'crypto';
 import { ShellService } from '../../infra/shell/shell.service';
 import { BurnJob } from '../../shared/types/burn.types';
 import { config } from '../../config/env';
@@ -43,6 +45,101 @@ export class BurnService {
   }
 
   /**
+   * Calcula o hash MD5 de uma fonte (arquivo ou device de bloco), lendo no
+   * máximo `maxBytes` bytes. Alinhado a 2048 (setor de DVD) para ler discos
+   * ópticos sem estourar a área gravada.
+   */
+  private static streamHash(
+    source: string,
+    maxBytes: number,
+    signal: AbortSignal,
+    onProgress?: (bytesRead: number) => void
+  ): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const hash = crypto.createHash('md5');
+      let read = 0;
+      const stream = createReadStream(source, {
+        highWaterMark: 1024 * 1024, // 1 MiB (múltiplo de 2048)
+        end: maxBytes - 1,          // offset inclusivo
+      });
+
+      stream.on('data', (chunk) => {
+        if (signal.aborted) {
+          stream.destroy(new Error('AbortError'));
+          return;
+        }
+        hash.update(chunk);
+        read += chunk.length;
+        if (onProgress) onProgress(read);
+      });
+      stream.on('end', () => resolve(hash.digest('hex')));
+      stream.on('error', reject);
+    });
+  }
+
+  /**
+   * Verifica a gravação: lê do disco exatamente o tamanho da imagem e compara
+   * o hash com o do arquivo de origem. Lança erro se houver divergência
+   * (gravação defeituosa). Se o disco não puder ser lido, apenas avisa.
+   */
+  static async verifyBurn(job: BurnJob): Promise<void> {
+    const signal = job.abortController!.signal;
+    const { size } = await fs.stat(job.file);
+
+    job.logs.push(`Verificando gravação (${(size / 1024 / 1024).toFixed(0)} MB)...`);
+
+    const srcHash = await BurnService.streamHash(job.file, size, signal);
+
+    let discHash: string;
+    try {
+      let lastDecile = -1;
+      discHash = await BurnService.streamHash(config.driveDevice, size, signal, (bytes) => {
+        const decile = Math.floor((bytes / size) * 10);
+        if (decile > lastDecile) {
+          lastDecile = decile;
+          job.logs.push(`Verificação: ${decile * 10}%`);
+          job.updatedAt = new Date();
+        }
+      });
+    } catch (err: any) {
+      if (err?.message === 'AbortError') throw err;
+      job.logs.push(`[warn] Não foi possível ler o disco para verificar: ${err?.message}. A gravação em si foi concluída.`);
+      return;
+    }
+
+    if (srcHash !== discHash) {
+      throw new Error('Verificação falhou: o disco não confere com a imagem (gravação defeituosa). Tente regravar em velocidade menor.');
+    }
+
+    job.logs.push('✅ Verificação OK: o disco confere exatamente com a imagem.');
+  }
+
+  /**
+   * Ejeta a bandeja após a gravação. Tenta o binário `eject` e, se ele não
+   * existir/ falhar (comum em imagens enxutas), recorre ao `wodim -eject`.
+   */
+  static async ejectTray(job: BurnJob): Promise<void> {
+    const attempts: [string, string[]][] = [
+      ['eject', [config.driveDevice]],
+      ['wodim', [`dev=${config.driveDevice}`, '-eject']],
+    ];
+
+    for (const [command, args] of attempts) {
+      try {
+        const result = await ShellService.execute(command, args);
+        if (result.code === 0 || result.code === null) {
+          job.logs.push(`Bandeja ejetada (${command}).`);
+          return;
+        }
+      } catch {
+        // tenta o próximo método
+      }
+    }
+
+    job.logs.push('[warn] Não foi possível ejetar a bandeja (gravação concluída mesmo assim).');
+  }
+
+  /**
    * Processador de gravação. Prepara os comandos e invoca o ShellService.
    */
   static async processJob(job: BurnJob): Promise<void> {
@@ -57,7 +154,7 @@ export class BurnService {
     // Mock Mode fallback
     if (config.isWindows) {
       job.logs.push('Ambiente Windows detectado. Simulando gravação de 10 segundos...');
-      job.logs.push(`Opções: speed=${job.options.speed ?? 'auto'}, dummy=${job.options.dummy}, eject=${job.options.eject}, burnfree=${job.options.burnfree}`);
+      job.logs.push(`Opções: speed=${job.options.speed ?? 'auto'}, dummy=${job.options.dummy}, eject=${job.options.eject}, burnfree=${job.options.burnfree}, verify=${job.options.verify}`);
       for (let i = 1; i <= 10; i++) {
         if (job.abortController.signal.aborted) {
           throw new Error('AbortError');
@@ -66,6 +163,9 @@ export class BurnService {
         job.progress = i * 10;
         job.logs.push(`Simulação Progresso: ${job.progress}%`);
         job.updatedAt = new Date();
+      }
+      if (job.options.verify) {
+        job.logs.push('Simulando verificação do disco... ✅ OK (mock).');
       }
       job.logs.push('Simulação concluída com sucesso.');
       return;
@@ -125,13 +225,14 @@ export class BurnService {
 
       job.progress = 100;
 
+      // Verificação (PS2/DVD): lê o disco de volta e compara com a imagem
+      if (job.type === 'ps2' && opts.verify) {
+        await BurnService.verifyBurn(job);
+      }
+
       // growisofs não ejeta sozinho; faz best-effort após sucesso (cdrdao usa --eject)
       if (job.type === 'ps2' && opts.eject) {
-        try {
-          await ShellService.execute('eject', [config.driveDevice]);
-        } catch {
-          job.logs.push('[warn] Falha ao ejetar a bandeja (gravação concluída mesmo assim).');
-        }
+        await BurnService.ejectTray(job);
       }
     } catch (err: any) {
       if (err.name === 'AbortError' || err.message === 'AbortError') {

@@ -17,11 +17,13 @@ WORKDIR /app
 # Install native burning tools
 # - cdrdao: gravação de PS1 (CD, .cue)
 # - dvd+rw-tools: fornece o growisofs, usado p/ PS2 (DVD, .iso) com -dvd-compat
-# - wodim: utilitário auxiliar (eject/scan)
+# - wodim: utilitário auxiliar (scan / eject de fallback)
+# - eject: ejeta a bandeja do drive
 RUN apt-get update && apt-get install -y \
     wodim \
     cdrdao \
     dvd+rw-tools \
+    eject \
     && rm -rf /var/lib/apt/lists/*
 
 COPY package*.json ./

@@ -5,7 +5,8 @@ export interface BurnOptions {
   speed?: number;     // velocidade de gravação (x). Se ausente, usa o padrão por tipo de mídia
   dummy: boolean;     // modo teste: simula a gravação sem queimar o disco
   eject: boolean;     // ejeta a bandeja ao concluir
-  burnfree: boolean;  // proteção contra buffer underrun (burnfree)
+  burnfree: boolean;  // proteção contra buffer underrun (burnfree) — PS1/cdrdao
+  verify: boolean;    // após gravar, lê o disco de volta e compara com a imagem — PS2/DVD
 }
 
 export interface BurnJob {

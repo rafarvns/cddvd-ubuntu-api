@@ -40,6 +40,7 @@ const burnSchema = z.object({
     dummy: z.boolean().default(false),
     eject: z.boolean().default(false),
     burnfree: z.boolean().default(true),
+    verify: z.boolean().default(true),
   }).prefault({}),
 });
 
