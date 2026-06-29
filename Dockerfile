@@ -15,9 +15,13 @@ FROM node:20-bullseye-slim
 WORKDIR /app
 
 # Install native burning tools
+# - cdrdao: gravação de PS1 (CD, .cue)
+# - dvd+rw-tools: fornece o growisofs, usado p/ PS2 (DVD, .iso) com -dvd-compat
+# - wodim: utilitário auxiliar (eject/scan)
 RUN apt-get update && apt-get install -y \
     wodim \
     cdrdao \
+    dvd+rw-tools \
     && rm -rf /var/lib/apt/lists/*
 
 COPY package*.json ./

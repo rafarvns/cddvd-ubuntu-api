@@ -8,7 +8,7 @@ A robust, secure, and modular Node.js/TypeScript API designed to control optical
 - **Queue Management**: FIFO job queue ensures only one burning process runs at a time.
 - **Real-time Monitoring**: Progress tracking and live logs served via API and UI.
 - **Hardware Control**: Remote eject capability.
-- **Media Support**: Automatically detects and handles PS1 (via `cdrdao`) and PS2 (via `wodim`) recording requirements.
+- **Media Support**: Automatically detects and handles PS1 (CD via `cdrdao`) and PS2 (DVD via `growisofs`, burned `-dvd-compat`/closed so the console accepts the disc).
 - **Standalone Binary**: Can be packaged into a single executable for easy distribution on Linux.
 - **Docker Ready**: Pre-configured Docker and Docker Compose support for easy deployment.
 
@@ -16,12 +16,12 @@ A robust, secure, and modular Node.js/TypeScript API designed to control optical
 
 - **Backend**: Node.js, Express, TypeScript.
 - **Frontend**: Vanilla HTML5, CSS3 (Modern Industrial Aesthetic), JavaScript.
-- **Tools**: `wodim`, `cdrdao` (for Linux hardware interaction).
+- **Tools**: `cdrdao`, `growisofs` (dvd+rw-tools), `wodim` (for Linux hardware interaction).
 - **Logging**: Pino.
 
 ## 🐳 Docker (Recommended)
 
-The easiest way to run BurnStation is using Docker. It handles all native dependencies (`wodim`, `cdrdao`) and hardware permissions automatically.
+The easiest way to run BurnStation is using Docker. It handles all native dependencies (`cdrdao`, `growisofs`, `wodim`) and hardware permissions automatically.
 
 ### Run with Docker Compose
 ```bash
@@ -46,7 +46,7 @@ The application is configured via environment variables or a `.env` file:
 
 ### Prerequisites
 - Node.js 18+
-- Linux system with burning tools: `sudo apt install wodim cdrdao`
+- Linux system with burning tools: `sudo apt install wodim cdrdao dvd+rw-tools`
 
 ### Setup
 1. Clone the repository and install dependencies:

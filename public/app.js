@@ -6,7 +6,7 @@ const API_BASE = '/api';
 const POLLING_INTERVAL = 2000;
 
 // State
-let files = [];
+let currentDir = { path: '', parent: null, dirs: [], files: [] };
 let history = [];
 let currentJob = null;
 let pollInterval = null;
@@ -16,6 +16,7 @@ const elements = {
     serverStatus: document.getElementById('server-status'),
     fileList: document.getElementById('file-list'),
     fileSearch: document.getElementById('file-search'),
+    breadcrumb: document.getElementById('breadcrumb'),
     historyList: document.getElementById('history-list'),
     burningPanel: document.getElementById('burning-now'),
     currentFilename: document.getElementById('current-filename'),
@@ -34,6 +35,11 @@ const elements = {
     toBurnFile: document.getElementById('to-burn-file'),
     modalConfirm: document.getElementById('modal-confirm'),
     modalCancel: document.getElementById('modal-cancel'),
+    optSpeed: document.getElementById('opt-speed'),
+    optBurnfree: document.getElementById('opt-burnfree'),
+    fieldBurnfree: document.getElementById('field-burnfree'),
+    optDummy: document.getElementById('opt-dummy'),
+    optEject: document.getElementById('opt-eject'),
 };
 
 // Initial Load
@@ -52,6 +58,16 @@ function registerListeners() {
     });
     
     elements.fileSearch.addEventListener('input', renderFiles);
+
+    // Navegação por diretórios (delegação de eventos)
+    elements.fileList.addEventListener('click', (e) => {
+        const folder = e.target.closest('.folder-item');
+        if (folder) navigateTo(folder.dataset.path);
+    });
+    elements.breadcrumb.addEventListener('click', (e) => {
+        const crumb = e.target.closest('.crumb');
+        if (crumb) navigateTo(crumb.dataset.path);
+    });
     
     elements.modalCancel.addEventListener('click', hideModal);
 }
@@ -77,12 +93,24 @@ async function refreshData() {
 
 async function fetchFiles() {
     try {
-        const resp = await fetch(`${API_BASE}/files`);
-        files = await resp.json();
+        const resp = await fetch(`${API_BASE}/browse?path=${encodeURIComponent(currentDir.path)}`);
+        if (!resp.ok) {
+            // Diretório sumiu (ex.: removido) — volta para a raiz
+            if (currentDir.path) return navigateTo('');
+            throw new Error(`HTTP ${resp.status}`);
+        }
+        currentDir = await resp.json();
+        renderBreadcrumb();
         renderFiles();
     } catch (e) {
         console.error('Failed to fetch files', e);
     }
+}
+
+async function navigateTo(relativePath) {
+    currentDir.path = relativePath;
+    elements.fileSearch.value = '';
+    await fetchFiles();
 }
 
 async function fetchHistory() {
@@ -117,11 +145,20 @@ async function ejectDrive() {
 }
 
 async function startBurn(filename) {
+    const speedRaw = elements.optSpeed.value.trim();
+    const options = {
+        dummy: elements.optDummy.checked,
+        eject: elements.optEject.checked,
+        burnfree: elements.optBurnfree.checked,
+    };
+    // Só envia speed se preenchido; vazio = automático (padrão do servidor)
+    if (speedRaw !== '') options.speed = parseInt(speedRaw, 10);
+
     try {
         const resp = await fetch(`${API_BASE}/burn`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ file: filename })
+            body: JSON.stringify({ file: filename, options })
         });
         const data = await resp.json();
         hideModal();
@@ -167,19 +204,60 @@ function startBackgroundPolling() {
 }
 
 // UI Rendering
+function baseName(p) {
+    return p.split('/').pop();
+}
+
+function renderBreadcrumb() {
+    const segments = currentDir.path ? currentDir.path.split('/') : [];
+    let acc = '';
+    const crumbs = [`<span class="crumb root" data-path="">💿 root</span>`];
+    for (const seg of segments) {
+        acc = acc ? `${acc}/${seg}` : seg;
+        crumbs.push('<span class="crumb-sep">/</span>');
+        crumbs.push(`<span class="crumb" data-path="${acc}">${seg}</span>`);
+    }
+    // Último segmento é a pasta atual: não navegável
+    if (crumbs.length > 1) {
+        const lastIdx = crumbs.length - 1;
+        crumbs[lastIdx] = crumbs[lastIdx].replace('class="crumb"', 'class="crumb current"');
+    }
+    elements.breadcrumb.innerHTML = crumbs.join('');
+}
+
 function renderFiles() {
     const filter = elements.fileSearch.value.toLowerCase();
-    const filtered = files.filter(f => f.filename.toLowerCase().includes(filter));
-    
-    elements.fileList.innerHTML = filtered.map(f => `
+
+    const dirs = currentDir.dirs.filter(d => baseName(d).toLowerCase().includes(filter));
+    const files = currentDir.files.filter(f => baseName(f.filename).toLowerCase().includes(filter));
+
+    const upRow = currentDir.path
+        ? `<div class="file-item folder-item up" data-path="${currentDir.parent || ''}">
+               <div class="file-info"><span class="file-name">📁 ..</span></div>
+           </div>`
+        : '';
+
+    const dirRows = dirs.map(d => `
+        <div class="file-item folder-item" data-path="${d}">
+            <div class="file-info">
+                <span class="file-name">📁 ${baseName(d)}</span>
+            </div>
+            <span class="file-type">folder</span>
+        </div>
+    `).join('');
+
+    const fileRows = files.map(f => `
         <div class="file-item">
             <div class="file-info">
-                <span class="file-name">${f.filename}</span>
+                <span class="file-name">💿 ${baseName(f.filename)}</span>
                 <span class="file-type">${f.type} media</span>
             </div>
-            <button class="btn primary small" onclick="showConfirm('${f.filename}')">Burn</button>
+            <button class="btn primary small" onclick="showConfirm('${f.filename}', '${f.type}')">Burn</button>
         </div>
-    `).join('') || '<p class="meta">No files found</p>';
+    `).join('');
+
+    elements.fileList.innerHTML = upRow + dirRows + fileRows
+        || '<p class="meta">No files found</p>';
 }
 
 function renderHistory() {
@@ -216,8 +294,11 @@ function updateActiveJobUI(job) {
 }
 
 // Modal Logic
-function showConfirm(filename) {
+function showConfirm(filename, type) {
     elements.toBurnFile.textContent = filename;
+    // burnfree só se aplica ao PS1 (cdrdao). No PS2 (growisofs) a proteção
+    // contra buffer underrun é automática, então escondemos a opção.
+    elements.fieldBurnfree.style.display = type === 'ps1' ? '' : 'none';
     elements.confirmModal.classList.add('active');
     elements.modalConfirm.onclick = () => startBurn(filename);
 }

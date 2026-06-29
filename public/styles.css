@@ -249,6 +249,54 @@ h2 {
     border-radius: 3px;
 }
 
+/* Breadcrumb */
+.breadcrumb {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem;
+    margin-bottom: 1rem;
+    font-size: 0.8125rem;
+}
+
+.breadcrumb .crumb {
+    color: var(--primary);
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 6px;
+    transition: background 0.2s;
+}
+
+.breadcrumb .crumb:hover {
+    background: rgba(59, 130, 246, 0.1);
+}
+
+.breadcrumb .crumb.current {
+    color: var(--text);
+    cursor: default;
+}
+
+.breadcrumb .crumb.current:hover {
+    background: transparent;
+}
+
+.breadcrumb .crumb-sep {
+    color: var(--text-dim);
+}
+
+/* Folder rows */
+.folder-item {
+    cursor: pointer;
+}
+
+.folder-item:hover {
+    background: rgba(59, 130, 246, 0.06);
+}
+
+.folder-item.up .file-name {
+    color: var(--text-dim);
+}
+
 /* File List */
 .search-box {
     margin-bottom: 1rem;
@@ -392,6 +440,45 @@ footer {
 .modal-content p {
     color: var(--text-dim);
     margin-bottom: 2rem;
+}
+
+.form-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    font-size: 0.8125rem;
+    color: var(--text-dim);
+}
+
+.form-field input[type="number"] {
+    width: 100%;
+    background: #0f172a;
+    border: 1px solid var(--border);
+    padding: 0.625rem 0.75rem;
+    border-radius: 8px;
+    color: white;
+    outline: none;
+}
+
+.form-field.checkbox {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.625rem;
+    cursor: pointer;
+}
+
+.form-field.checkbox input {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--primary);
+    cursor: pointer;
 }
 
 .modal-actions {

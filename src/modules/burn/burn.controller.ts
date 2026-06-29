@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import crypto from 'crypto';
-import { getFilesList, getSafeFilePath, isValidExtension } from '../../shared/utils/file.utils';
+import { getFilesList, getSafeFilePath, isValidExtension, browseDir } from '../../shared/utils/file.utils';
 import { BurnJob, MediaType } from '../../shared/types/burn.types';
 import { burnQueue } from './burn.queue';
 import { BurnService } from './burn.service';
@@ -20,8 +20,27 @@ burnRouter.get('/files', async (req: Request, res: Response) => {
   }
 });
 
+burnRouter.get('/browse', async (req: Request, res: Response): Promise<any> => {
+  try {
+    const relativePath = typeof req.query.path === 'string' ? req.query.path : '';
+    const result = await browseDir(relativePath);
+    if (result === null) {
+      return res.status(404).json({ error: 'Diretório não encontrado ou fora da raiz permitida.' });
+    }
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ error: 'Erro ao navegar no diretório.', details: err?.message });
+  }
+});
+
 const burnSchema = z.object({
-  file: z.string().min(1)
+  file: z.string().min(1),
+  options: z.object({
+    speed: z.number().int().min(1).max(56).optional(),
+    dummy: z.boolean().default(false),
+    eject: z.boolean().default(false),
+    burnfree: z.boolean().default(true),
+  }).prefault({}),
 });
 
 burnRouter.post('/burn', (req: Request, res: Response): any => {
@@ -43,6 +62,7 @@ burnRouter.post('/burn', (req: Request, res: Response): any => {
       id: crypto.randomUUID(),
       file: safePath,
       type: (isPs1 ? 'ps1' : 'ps2') as MediaType,
+      options: parsed.options,
       status: 'pending',
       progress: 0,
       logs: [],

@@ -63,11 +63,14 @@
             <div class="grid">
                 <section class="files-panel panel">
                     <h2>Available Media</h2>
+                    <nav class="breadcrumb" id="breadcrumb">
+                        <!-- Breadcrumb segments injected here -->
+                    </nav>
                     <div class="search-box">
-                        <input type="text" id="file-search" placeholder="Filter files...">
+                        <input type="text" id="file-search" placeholder="Filter this folder...">
                     </div>
                     <div class="file-list" id="file-list">
-                        <!-- Files will be injected here -->
+                        <!-- Folders and files will be injected here -->
                     </div>
                 </section>
 
@@ -92,8 +95,31 @@
     <!-- Modals -->
     <div id="confirm-modal" class="modal">
         <div class="modal-content">
-            <h3>Start Burning?</h3>
+            <h3>Burn Settings</h3>
             <p>You are about to burn "<span id="to-burn-file"></span>".</p>
+
+            <div class="form-grid">
+                <label class="form-field">
+                    <span>Speed (x)</span>
+                    <input type="number" id="opt-speed" min="1" max="56" placeholder="Auto">
+                </label>
+
+                <label class="form-field checkbox" id="field-burnfree">
+                    <input type="checkbox" id="opt-burnfree" checked>
+                    <span>Buffer underrun protection (burnfree)</span>
+                </label>
+
+                <label class="form-field checkbox">
+                    <input type="checkbox" id="opt-dummy">
+                    <span>Test mode (simulate, no actual burn)</span>
+                </label>
+
+                <label class="form-field checkbox">
+                    <input type="checkbox" id="opt-eject">
+                    <span>Eject tray when finished</span>
+                </label>
+            </div>
+
             <div class="modal-actions">
                 <button id="modal-cancel" class="btn secondary">Cancel</button>
                 <button id="modal-confirm" class="btn primary">Start Now</button>
