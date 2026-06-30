@@ -40,6 +40,8 @@ const elements = {
     fieldBurnfree: document.getElementById('field-burnfree'),
     optVerify: document.getElementById('opt-verify'),
     fieldVerify: document.getElementById('field-verify'),
+    optBooktype: document.getElementById('opt-booktype'),
+    fieldBooktype: document.getElementById('field-booktype'),
     optDummy: document.getElementById('opt-dummy'),
     optEject: document.getElementById('opt-eject'),
 };
@@ -153,6 +155,7 @@ async function startBurn(filename) {
         eject: elements.optEject.checked,
         burnfree: elements.optBurnfree.checked,
         verify: elements.optVerify.checked,
+        booktypeDvdRom: elements.optBooktype.checked,
     };
     // Só envia speed se preenchido; vazio = automático (padrão do servidor)
     if (speedRaw !== '') options.speed = parseInt(speedRaw, 10);
@@ -304,6 +307,8 @@ function showConfirm(filename, type) {
     elements.fieldBurnfree.style.display = type === 'ps1' ? '' : 'none';
     // verify só está implementado para PS2 (DVD/growisofs).
     elements.fieldVerify.style.display = type === 'ps2' ? '' : 'none';
+    // booktype DVD-ROM só se aplica a DVD+R (PS2). Inofensivo desmarcar em DVD-R.
+    elements.fieldBooktype.style.display = type === 'ps2' ? '' : 'none';
     elements.confirmModal.classList.add('active');
     elements.modalConfirm.onclick = () => startBurn(filename);
 }

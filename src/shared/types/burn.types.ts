@@ -7,6 +7,7 @@ export interface BurnOptions {
   eject: boolean;     // ejeta a bandeja ao concluir
   burnfree: boolean;  // proteção contra buffer underrun (burnfree) — PS1/cdrdao
   verify: boolean;    // após gravar, lê o disco de volta e compara com a imagem — PS2/DVD
+  booktypeDvdRom: boolean; // marca DVD+R como DVD-ROM (bitsetting) — PS2/DVD+R
 }
 
 export interface BurnJob {

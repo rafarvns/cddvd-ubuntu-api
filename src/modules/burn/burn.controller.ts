@@ -41,6 +41,7 @@ const burnSchema = z.object({
     eject: z.boolean().default(false),
     burnfree: z.boolean().default(true),
     verify: z.boolean().default(true),
+    booktypeDvdRom: z.boolean().default(true),
   }).prefault({}),
 });
 

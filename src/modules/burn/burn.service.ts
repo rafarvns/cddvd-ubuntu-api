@@ -70,6 +70,33 @@ export class BurnService {
   }
 
   /**
+   * Instrui o gravador a marcar a mídia DVD+R como DVD-ROM (bitsetting/booktype).
+   * Isso aumenta a compatibilidade com leitores antigos/exigentes como o PS2,
+   * que frequentemente têm dificuldade com DVD+R "cru". Deve ser chamado ANTES
+   * da gravação (o firmware aplica a marcação ao escrever o lead-in).
+   * Best-effort: depende do gravador suportar; nunca interrompe a gravação.
+   * Só faz sentido para DVD+R/+RW (DVD-R tem o lead-in prensado de fábrica).
+   */
+  static async setBookType(job: BurnJob): Promise<void> {
+    try {
+      const result = await ShellService.execute('dvd+rw-booktype', [
+        '-dvd-rom-spec',
+        '-unit+r',
+        config.driveDevice,
+      ]);
+      const text = (result.stdout || '') + (result.stderr || '');
+
+      if (result.code === 0 || /brand DVD\+R media as DVD-ROM/i.test(text)) {
+        job.logs.push('Booktype: gravador marcará DVD+R como DVD-ROM ✅ (melhor compatibilidade com PS2).');
+      } else {
+        job.logs.push('[warn] Gravador não aceitou o booktype DVD-ROM (segue gravando como DVD+R comum). Em DVD-R isso é esperado e inofensivo.');
+      }
+    } catch {
+      job.logs.push('[warn] Não foi possível aplicar booktype DVD-ROM (gravador não suporta ou ferramenta ausente). Gravação segue normalmente.');
+    }
+  }
+
+  /**
    * Calcula o hash MD5 de uma fonte (arquivo ou device de bloco), lendo no
    * máximo `maxBytes` bytes. Alinhado a 2048 (setor de DVD) para ler discos
    * ópticos sem estourar a área gravada.
@@ -179,7 +206,10 @@ export class BurnService {
     // Mock Mode fallback
     if (config.isWindows) {
       job.logs.push('Ambiente Windows detectado. Simulando gravação de 10 segundos...');
-      job.logs.push(`Opções: speed=${job.options.speed ?? 'auto'}, dummy=${job.options.dummy}, eject=${job.options.eject}, burnfree=${job.options.burnfree}, verify=${job.options.verify}`);
+      job.logs.push(`Opções: speed=${job.options.speed ?? 'auto'}, dummy=${job.options.dummy}, eject=${job.options.eject}, burnfree=${job.options.burnfree}, verify=${job.options.verify}, booktypeDvdRom=${job.options.booktypeDvdRom}`);
+      if (job.options.booktypeDvdRom) {
+        job.logs.push('Simulando booktype DVD-ROM... ✅ (mock).');
+      }
       for (let i = 1; i <= 10; i++) {
         if (job.abortController.signal.aborted) {
           throw new Error('AbortError');
@@ -231,6 +261,9 @@ export class BurnService {
     // Ajuda a diagnosticar discos "marginais" e a entender a velocidade real escolhida.
     if (job.type === 'ps2') {
       await BurnService.logMediaInfo(job);
+      if (opts.booktypeDvdRom) {
+        await BurnService.setBookType(job);
+      }
     }
 
     job.logs.push(`Comando: ${command} ${args.join(' ')}`);
